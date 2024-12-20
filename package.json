@@ -1,0 +1,23 @@
+{
+  "name": "mql5-timer",
+  "version": "1.0.0",
+  "description": "Callback interface for timer",
+  "main": "index.mqh",
+  "scripts": {},
+  "keywords": [
+    "MQL5",
+    "Timer",
+    "MQL5 Timer"
+  ],
+  "author": "Kuzma Shevelev (seffele@gmail.com)",
+  "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Senails/mql5-json",
+    "author": "https://github.com/Senails"
+  },
+  "bugs": {
+    "url": "https://github.com/HommaTech/mql-simplify/issues",
+    "email": "seffele@gmail.com"
+  }
+}
