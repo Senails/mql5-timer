@@ -69,7 +69,7 @@ private:
         EventKillTimer();
         if (ArraySize(Timer::taskList) == 0) return;
         int timeToNextTask = int(Timer::taskList[0].date - GetTickCount64());
-        EventSetMillisecondTimer(timeToNextTask > 0 ? timeToNextTask : 0);
+        EventSetMillisecondTimer(timeToNextTask > 0 ? timeToNextTask : 1);
     }
 
     static void handleTimerEvent() {
