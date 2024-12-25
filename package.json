@@ -1,6 +1,6 @@
 {
   "name": "mql5-timer",
-  "version": "1.0.4",
+  "version": "2.0.0",
   "description": "Callback interface for timer",
   "main": "index.mqh",
   "scripts": {},

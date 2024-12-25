@@ -9,14 +9,14 @@ ulong intervalId;
 
 void OnInit() {
     // Only for Experts and Indicators
-    Timer::setTimout(myCallback2, 1000); // after 1000ms
-    Timer::setTimout(myCallback1, 500); // after 500ms
+    Timer::setTimeout(myCallback2, 1000); // after 1000ms
+    Timer::setTimeout(myCallback1, 500); // after 500ms
     intervalId = Timer::setInterval(myCallback4, 800, "myCallback4 800"); // every 800ms
 }
 
 void myCallback1() {
     Print("myCallback 500");
-    Timer::setTimout(myCallback3, 600); // after 600ms
+    Timer::setTimeout(myCallback3, 600); // after 600ms
 }
 
 void myCallback2() {

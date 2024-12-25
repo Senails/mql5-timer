@@ -6,10 +6,10 @@ private:
     class Task;
 
 public:
-    static ulong setTimout(TimerCallbackWithParam callback, int ms, string param) {
+    static ulong setTimeout(TimerCallbackWithParam callback, int ms, string param) {
         return new Task(callback, GetTickCount64() + ms, 0, param).id;
     }
-    static ulong setTimout(TimerCallbackWithoutParam callback, int ms) {
+    static ulong setTimeout(TimerCallbackWithoutParam callback, int ms) {
         return new Task(callback, GetTickCount64() + ms, 0).id;
     }
     static void clearTimout(ulong id) {
