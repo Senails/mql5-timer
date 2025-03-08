@@ -1,8 +1,3 @@
-Callback interface for timer in the mql5 language
-
-example:
-
-```mql5
 #include "../index.mqh";
 
 ulong intervalId; // id for cancel
@@ -36,4 +31,3 @@ void myCallback5(string param, ulong idForCancel) {
     Print(param);
     Timer::clearInterval(intervalId);
 }
-```

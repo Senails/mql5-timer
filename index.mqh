@@ -1,88 +1,127 @@
-typedef void (*TimerCallbackWithParam)(string);
-typedef void (*TimerCallbackWithoutParam)();
+template<typename T>
+class TypedTimer {
+    typedef void (*TimerCallbackWithoutParam)();
+    typedef void (*TimerCallbackWithParam)(T);
+    typedef void (*TimerCallbackWithParamAndId)(T, ulong);
 
-class Timer {
-private:
     class Task;
-
 public:
-    static ulong setTimeout(TimerCallbackWithParam callback, int ms, string param) {
-        return new Task(callback, GetTickCount64() + ms, 0, param).id;
+    static ulong setTimeout(TimerCallbackWithParam callback, int ms, T param) {
+        return new Task(callback, ms, false, param).id;
     }
     static ulong setTimeout(TimerCallbackWithoutParam callback, int ms) {
-        return new Task(callback, GetTickCount64() + ms, 0).id;
+        return new Task(callback, ms, false).id;
     }
-    static void clearTimout(ulong id) {
-        Timer::removeTaskFromListById(id, true);
+    static void clearTimeout(ulong id) {
+        TimerController::removeTaskFromListById(id, true);
     }
 
-    static ulong setInterval(TimerCallbackWithParam callback, int ms, string param) {
-        return new Task(callback, GetTickCount64() + ms, ms > 0 ? ms : 1, param).id;
+    static ulong setInterval(TimerCallbackWithParamAndId callback, int ms, T param) {
+        return new Task(callback, ms, true, param).id;
+    }
+    static ulong setInterval(TimerCallbackWithParam callback, int ms, T param) {
+        return new Task(callback, ms, true, param).id;
     }
     static ulong setInterval(TimerCallbackWithoutParam callback, int ms) {
-        return new Task(callback, GetTickCount64() + ms, ms > 0 ? ms : 1).id;
+        return new Task(callback, ms, true).id;
     }
     static void clearInterval(ulong id) {
-        Timer::removeTaskFromListById(id, true);
-    }
-
-    static void onTimerHandler() {
-        Timer::handleTimerEvent();
+        TimerController::removeTaskFromListById(id, true);
     }
 
 private:
-    Timer() {}
+    TypedTimer() {};
 
-    static Task* taskList[];
+    class Task: public TimerController::BaseTimerTask {
+    public:
+        bool withParam;
+        bool withId;
+        T param;
 
-    static void insertTaskToList(Task* task) {
-        int size = ArraySize(Timer::taskList);
-        ArrayResize(Timer::taskList, size + 1);
+        TimerCallbackWithoutParam callbackWithoutParam;
+        TimerCallbackWithParam callbackWithParam;
+        TimerCallbackWithParamAndId callbackWithParamAndId;
+
+        Task(TimerCallbackWithParamAndId c, int ms, bool i, T p): BaseTimerTask(ms, i), callbackWithParamAndId(c), param(p), withId(true) {
+            TimerController::insertTaskToList(&this);
+            TimerController::updateTimer();
+        };
+        Task(TimerCallbackWithParam c, int ms, bool i, T p): BaseTimerTask(ms, i), callbackWithParam(c), param(p), withParam(true) {
+            TimerController::insertTaskToList(&this);
+            TimerController::updateTimer();
+        };
+        Task(TimerCallbackWithoutParam c, int ms, bool i): BaseTimerTask(ms, i), callbackWithoutParam(c) {
+            TimerController::insertTaskToList(&this);
+            TimerController::updateTimer();
+        };
+    
+        virtual void execute() override {
+            if (this.withId) {
+                this.callbackWithParamAndId(this.param, this.id);
+                return;
+            }
+            if (this.withParam) {
+                this.callbackWithParam(this.param);
+                return;
+            }
+            this.callbackWithoutParam();
+        }
+    };
+};
+
+class TimerController {
+    class BaseTimerTask;
+    static BaseTimerTask* taskList[];
+public:
+    ~TimerController() {
+        for (int i = 0; i < ArraySize(TimerController::taskList); i++) delete TimerController::taskList[i];
+    }
+
+    static void insertTaskToList(BaseTimerTask* task) {
+        int size = ArraySize(TimerController::taskList);
+        ArrayResize(TimerController::taskList, size + 1, 10);
 
         for (int i = size; i > 0; i--) {
-            if (Timer::taskList[i-1].date <= task.date) {
-                Timer::taskList[i] = task;
+            if (TimerController::taskList[i-1].date <= task.date) {
+                TimerController::taskList[i] = task;
                 return;
             }
-            Timer::taskList[i] = Timer::taskList[i-1];
+            TimerController::taskList[i] = TimerController::taskList[i-1];
         }
 
-        Timer::taskList[0] = task;
+        TimerController::taskList[0] = task;
     }
-
     static void removeTaskFromListById(ulong id, bool cleanMemory = false) {
-        int size = ArraySize(Timer::taskList);
+        int size = ArraySize(TimerController::taskList);
         for (int i = 0; i < size; i++) {
-            if (Timer::taskList[i].id == id) {
-                if (cleanMemory) delete Timer::taskList[i];
+            if (TimerController::taskList[i].id == id) {
+                if (cleanMemory) delete TimerController::taskList[i];
 
                 for (int j = i; j < size - 1; j++) {
-                    Timer::taskList[j] = Timer::taskList[j + 1];
+                    TimerController::taskList[j] = TimerController::taskList[j + 1];
                 }
-                ArrayResize(Timer::taskList, size - 1);
+                ArrayResize(TimerController::taskList, size - 1, 10);
                 return;
             }
         }
     }
-
     static void updateTimer() {
         EventKillTimer();
-        if (ArraySize(Timer::taskList) == 0) return;
-        int timeToNextTask = int(Timer::taskList[0].date - GetTickCount64());
-        EventSetMillisecondTimer(timeToNextTask > 0 ? timeToNextTask : 1);
+        if (ArraySize(TimerController::taskList) == 0) return;
+        int timeToNextTask = int(TimerController::taskList[0].date - GetTickCount64());
+        EventSetMillisecondTimer(MathMax(timeToNextTask, 1));
     }
-
     static void handleTimerEvent() {
-        while (ArraySize(Timer::taskList) > 0) {
-            Task* task = Timer::taskList[0];
+        while (ArraySize(TimerController::taskList) > 0) {
+            BaseTimerTask* task = TimerController::taskList[0];
             ulong now = GetTickCount64();
 
             if (task.date > now) break;
-            Timer::removeTaskFromListById(task.id);
+            TimerController::removeTaskFromListById(task.id);
 
-            if (task.interval > 0) {
-                task.date += task.interval;
-                Timer::insertTaskToList(task);
+            if (task.interval) {
+                task.date += task.time;
+                TimerController::insertTaskToList(task);
                 task.execute();
                 continue;
             }
@@ -91,56 +130,28 @@ private:
             delete task;
         }
 
-        Timer::updateTimer();
+        TimerController::updateTimer();
     }
 
-    class Task {
+    class BaseTimerTask {
         static ulong idCounter;
     public:
         ulong id;
+        int time;
         ulong date;
-        int interval;
+        bool interval;
 
-        bool withParam;
-        string param;
-
-        TimerCallbackWithParam callbackWithParam;
-        TimerCallbackWithoutParam callbackWithoutParam;
-
-        Task(TimerCallbackWithParam c, ulong d, int i, string p): callbackWithParam(c), date(d), interval(i), param(p), withParam(true), id(idCounter++) {
-            Timer::insertTaskToList(&this);
-            Timer::updateTimer();
+        BaseTimerTask(int ms, bool i): id(idCounter++), time(ms), interval(i) {
+            this.date = GetTickCount64() + MathMax(16, ms);
         };
-        Task(TimerCallbackWithoutParam c, ulong d, int i): callbackWithoutParam(c), date(d), interval(i), withParam(false), id(idCounter++) {
-            Timer::insertTaskToList(&this);
-            Timer::updateTimer();
-        };
-    
-        void execute() {
-            if (this.withParam) {
-                this.callbackWithParam(this.param);
-                return;
-            }
-            this.callbackWithoutParam();
-        }
-    };
 
-    class TimerIniterAndDesctructor {
-    public:
-        TimerIniterAndDesctructor() {
-            ArrayResize(Timer::taskList, 0, 10);
-        }
-
-        ~TimerIniterAndDesctructor() {
-            for (int i = 0; i < ArraySize(Timer::taskList); i++) delete Timer::taskList[i];
-            ArrayResize(Timer::taskList, 0);
-        }
+        virtual void execute() {};
     };
-    
 };
 
-ulong Timer::Task::idCounter = 0;
-Timer::Task* Timer::taskList[];
-Timer::TimerIniterAndDesctructor timerIniterAndDesctructor;
+class Timer: public TypedTimer<string> {};
 
-void OnTimer() { Timer::onTimerHandler(); };
+ulong TimerController::BaseTimerTask::idCounter = 0;
+TimerController::BaseTimerTask* TimerController::taskList[];
+TimerController timerController;
+void OnTimer() { TimerController::handleTimerEvent(); };
