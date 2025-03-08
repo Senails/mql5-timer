@@ -21,13 +21,13 @@ void Callback2() {
 }
 void myCallback3(string param) {
     Print(param);
-    Timer::clearInterval(intervalId);
 }
 
 void Callback4(int value) {
     Print("Called with value: ", value);
+    Timer::clearInterval(intervalId);
 }
 void myCallback5(string param, ulong idForCancel) {
     Print(param);
-    Timer::clearInterval(intervalId);
+    Timer::clearInterval(idForCancel);
 }
