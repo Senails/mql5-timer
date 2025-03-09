@@ -79,7 +79,7 @@ public:
 
     static void insertTaskToList(BaseTimerTask* task) {
         int size = ArraySize(TimerController::taskList);
-        ArrayResize(TimerController::taskList, size + 1, 10);
+        ArrayResize(TimerController::taskList, size + 1, MathMax(size/10, 10));
 
         for (int i = size; i > 0; i--) {
             if (TimerController::taskList[i-1].date <= task.date) {
@@ -100,7 +100,7 @@ public:
                 for (int j = i; j < size - 1; j++) {
                     TimerController::taskList[j] = TimerController::taskList[j + 1];
                 }
-                ArrayResize(TimerController::taskList, size - 1, 10);
+                ArrayResize(TimerController::taskList, size - 1, MathMax(size/10, 10));
                 return;
             }
         }
